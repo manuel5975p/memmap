@@ -147,11 +147,16 @@ public:
         m_data = (first_if_t<constness, const char*, char*>)MapViewOfFile(m_mapping, constness ? FILE_MAP_READ : FILE_MAP_WRITE, 0, 0, 0);
 #endif
     }
-    ~filemap() {
+    void close() {
 #ifdef _POSIX_VERSION
-        munmap((void*)data, m_size);
-        data = nullptr;
-        close(filedesc);
+        if (data) {
+            munmap((void*)data, m_size);
+            data = nullptr;
+    }
+        if (fd != -1) {
+            close(filedesc);
+            fd = -1;
+        }
 #elif defined(_MSC_VER)
         if (m_data) {
             UnmapViewOfFile(m_data);
@@ -166,6 +171,9 @@ public:
             m_file = INVALID_HANDLE_VALUE;
         }
 #endif
+    }
+    ~filemap() {
+        close();
     }
     mmap_size_t size()const {
         return m_size;
