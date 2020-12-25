@@ -1,6 +1,6 @@
 #ifndef MEMMAP_HPP
 #define MEMMAP_HPP
-#ifdef _POSIX_VERSION
+#ifdef __unix__
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -31,7 +31,7 @@ template<bool constness>
 struct filemap {
 private:
     first_if_t<constness, const char*, char*> m_data;
-#ifdef _POSIX_VERSION
+#ifdef __unix__
     int filedesc;
 #elif defined(_MSC_VER)
     HANDLE m_file;
@@ -43,13 +43,13 @@ public:
     filemap(const std::string& path) : filemap(path.c_str()) {}
     filemap(const char* path) : m_data(nullptr),
     
-#ifdef _POSIX_VERSION
+#ifdef __unix__
     filedesc(-1)
 #elif defined(_MSC_VER)
     m_file(INVALID_HANDLE_VALUE), m_mapping(NULL)
 #endif
     {
-#ifdef _POSIX_VERSION
+#ifdef __unix__
         filedesc = open(path, constness ? (O_RDONLY) : (O_RDWR));
         if (filedesc == -1) {
             throw std::invalid_argument("File could not be opened");
@@ -58,9 +58,9 @@ public:
         if (m_size == ((mmap_size_t)-1)) {
             throw std::invalid_argument("Size could not be determined");
         }
-        data = (char*)mmap(0, m_size, constness ? (PROT_READ) : (PROT_READ | PROT_WRITE), MAP_SHARED, filedesc, 0);
-        if ((void*)data == MAP_FAILED) {
-            close(filedesc);
+        m_data = (char*)mmap(0, m_size, constness ? (PROT_READ) : (PROT_READ | PROT_WRITE), MAP_SHARED, filedesc, 0);
+        if ((void*)m_data == MAP_FAILED) {
+            ::close(filedesc);
             throw std::invalid_argument("File could not be mapped");
         }
 #elif defined(_MSC_VER)
@@ -117,17 +117,17 @@ public:
         return m_data[i];
     }
     void resize(mmap_size_t size) {
-#ifdef _POSIX_VERSION
+#ifdef __unix__
         assert(!constness);
         if (ftruncate(filedesc, size) == -1) {
             throw std::invalid_argument("ftruncate failed");
         }
-        if (munmap((void*)data, m_size)) {
+        if (munmap((void*)m_data, m_size)) {
             throw std::invalid_argument("munmap failed");
         }
         m_size = size;
-        data = (char*)mmap(0, m_size, constness ? (PROT_READ) : (PROT_READ | PROT_WRITE), MAP_SHARED, filedesc, 0);
-        if ((void*)data == MAP_FAILED) {
+        m_data = (char*)mmap(0, m_size, constness ? (PROT_READ) : (PROT_READ | PROT_WRITE), MAP_SHARED, filedesc, 0);
+        if ((void*)m_data == MAP_FAILED) {
             throw std::invalid_argument("File could not be mapped");
         }
 #elif defined(_MSC_VER)
@@ -148,14 +148,14 @@ public:
 #endif
     }
     void close() {
-#ifdef _POSIX_VERSION
-        if (data) {
-            munmap((void*)data, m_size);
-            data = nullptr;
+#ifdef __unix__
+        if (m_data) {
+            munmap((void*)m_data, m_size);
+            m_data = nullptr;
     }
-        if (fd != -1) {
-            close(filedesc);
-            fd = -1;
+        if (filedesc != -1) {
+            ::close(filedesc);
+            filedesc = -1;
         }
 #elif defined(_MSC_VER)
         if (m_data) {
