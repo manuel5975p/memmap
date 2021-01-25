@@ -1,33 +1,33 @@
 #ifndef MEMMAP_HPP
 #define MEMMAP_HPP
 #ifdef __unix__
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
 #include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 using mmap_size_t = off_t;
 #elif defined(_MSC_VER)
 #include <Windows.h>
 using mmap_size_t = DWORD;
 #endif
+#include <cassert>
+#include <exception>
 #include <filesystem>
 #include <type_traits>
-#include <exception>
-#include <cassert>
-template<bool v, typename T, typename R>
+template <bool v, typename T, typename R>
 struct first_if {};
-template<typename T, typename R>
+template <typename T, typename R>
 struct first_if<true, T, R> {
     using type = T;
 };
-template<typename T, typename R>
+template <typename T, typename R>
 struct first_if<false, T, R> {
     using type = R;
 };
-template<bool v, typename T, typename R>
+template <bool v, typename T, typename R>
 using first_if_t = typename first_if<v, T, R>::type;
-template<bool constness>
+template <bool constness>
 struct filemap {
 private:
     first_if_t<constness, const char*, char*> m_data;
@@ -38,15 +38,17 @@ private:
     HANDLE m_mapping;
 #endif
     mmap_size_t m_size;
+
 public:
     filemap(const std::filesystem::path& paf) : filemap(paf.c_str()) {}
     filemap(const std::string& path) : filemap(path.c_str()) {}
-    filemap(const char* path) : m_data(nullptr),
-    
+    filemap(const char* path)
+        : m_data(nullptr),
+
 #ifdef __unix__
-    filedesc(-1)
+          filedesc(-1)
 #elif defined(_MSC_VER)
-    m_file(INVALID_HANDLE_VALUE), m_mapping(NULL)
+          m_file(INVALID_HANDLE_VALUE), m_mapping(NULL)
 #endif
     {
 #ifdef __unix__
@@ -64,11 +66,11 @@ public:
             throw std::invalid_argument("File could not be mapped");
         }
 #elif defined(_MSC_VER)
-        m_file = CreateFileA(path, constness ? GENERIC_READ : (GENERIC_READ | GENERIC_WRITE), FILE_SHARE_READ, NULL,
-            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        m_file = CreateFileA(path, constness ? GENERIC_READ : (GENERIC_READ | GENERIC_WRITE), FILE_SHARE_READ, NULL, OPEN_EXISTING,
+                             FILE_ATTRIBUTE_NORMAL, NULL);
 
         if (m_file == INVALID_HANDLE_VALUE) {
-           throw std::runtime_error("Opening file failed");
+            throw std::runtime_error("Opening file failed");
         }
 
         m_size = GetFileSize(m_file, NULL);
@@ -80,39 +82,39 @@ public:
         m_data = (first_if_t<constness, const char*, char*>)MapViewOfFile(m_mapping, constness ? FILE_MAP_READ : FILE_MAP_WRITE, 0, 0, 0);
 #endif
     }
-    template<typename hoger = bool>
+    template <typename hoger = bool>
     std::enable_if_t<std::integral_constant<hoger, !constness>::value, char*> begin() {
         return m_data;
     }
-    template<typename hoger = bool>
+    template <typename hoger = bool>
     std::enable_if_t<std::integral_constant<hoger, !constness>::value, char*> end() {
         return m_data + size();
     }
-    const char* begin()const {
+    const char* begin() const {
         return m_data;
     }
-    const char* end()const {
+    const char* end() const {
         return m_data + size();
     }
-    template<typename hoger = bool>
+    template <typename hoger = bool>
     std::enable_if_t<std::integral_constant<hoger, !constness>::value, char*> data() {
         return m_data;
     }
-    const char* data()const{
+    const char* data() const {
         return m_data;
     }
-    template<typename hoger = bool>
+    template <typename hoger = bool>
     std::enable_if_t<std::integral_constant<hoger, !constness>::value, char&> operator[](size_t i) {
         assert(i < m_size);
         assert(!constness);
         return m_data[i];
     }
-    template<typename hoger = bool>
-    std::enable_if_t<std::integral_constant<hoger, constness>::value, const char&> operator[](size_t i)const {
+    template <typename hoger = bool>
+    std::enable_if_t<std::integral_constant<hoger, constness>::value, const char&> operator[](size_t i) const {
         assert(i < m_size);
         return m_data[i];
     }
-    const char& operator[](size_t i)const {
+    const char& operator[](size_t i) const {
         assert(i < m_size);
         return m_data[i];
     }
@@ -152,7 +154,7 @@ public:
         if (m_data) {
             munmap((void*)m_data, m_size);
             m_data = nullptr;
-    }
+        }
         if (filedesc != -1) {
             ::close(filedesc);
             filedesc = -1;
@@ -175,7 +177,7 @@ public:
     ~filemap() {
         close();
     }
-    mmap_size_t size()const {
+    mmap_size_t size() const {
         return m_size;
     }
 };
