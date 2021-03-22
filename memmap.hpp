@@ -10,6 +10,8 @@ using mmap_size_t = off_t;
 #elif defined(_MSC_VER)
 #include <Windows.h>
 using mmap_size_t = DWORD;
+#else
+#error OS not supported
 #endif
 #include <cassert>
 #include <exception>
