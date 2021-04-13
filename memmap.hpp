@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 using mmap_size_t = off_t;
-#elif defined(_MSC_VER)
+#elif defined(_WIN32)
 #include <Windows.h>
 using mmap_size_t = DWORD;
 #else
@@ -15,6 +15,7 @@ using mmap_size_t = DWORD;
 #endif
 #include <cassert>
 #include <exception>
+#include <stdexcept>
 #include <filesystem>
 #include <type_traits>
 template <bool v, typename T, typename R>
