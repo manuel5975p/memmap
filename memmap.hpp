@@ -36,7 +36,7 @@ private:
     first_if_t<constness, const char*, char*> m_data;
 #ifdef __unix__
     int filedesc;
-#elif defined(_MSC_VER)
+#elif defined(_WIN32)
     HANDLE m_file;
     HANDLE m_mapping;
 #endif
@@ -50,7 +50,7 @@ public:
 
 #ifdef __unix__
           filedesc(-1)
-#elif defined(_MSC_VER)
+#elif defined(_WIN32)
           m_file(INVALID_HANDLE_VALUE), m_mapping(NULL)
 #endif
     {
@@ -68,7 +68,7 @@ public:
             ::close(filedesc);
             throw std::invalid_argument("File could not be mapped");
         }
-#elif defined(_MSC_VER)
+#elif defined(_WIN32)
         m_file = CreateFileA(path, constness ? GENERIC_READ : (GENERIC_READ | GENERIC_WRITE), FILE_SHARE_READ, NULL, OPEN_EXISTING,
                              FILE_ATTRIBUTE_NORMAL, NULL);
 
@@ -135,7 +135,7 @@ public:
         if ((void*)m_data == MAP_FAILED) {
             throw std::invalid_argument("File could not be mapped");
         }
-#elif defined(_MSC_VER)
+#elif defined(_WIN32)
         assert(!constness);
         UnmapViewOfFile(m_data);
         m_data = nullptr;
@@ -162,7 +162,7 @@ public:
             ::close(filedesc);
             filedesc = -1;
         }
-#elif defined(_MSC_VER)
+#elif defined(_WIN32)
         if (m_data) {
             UnmapViewOfFile(m_data);
             m_data = nullptr;
