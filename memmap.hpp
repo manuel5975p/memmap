@@ -39,6 +39,13 @@ private:
 #endif
     mmap_size_t m_size;
 public:
+    filemap() : m_data(nullptr), 
+#ifdef __unix__
+    filedesc(-1)
+#elif defined(_MSC_VER)
+    m_file(INVALID_HANDLE_VALUE), m_mapping(NULL)
+#endif
+    , m_size(0){};
     filemap(const std::filesystem::path& paf) : filemap(paf.c_str()) {}
     filemap(const std::string& path) : filemap(path.c_str()) {}
     filemap(const char* path) : m_data(nullptr),
@@ -152,7 +159,7 @@ public:
         if (m_data) {
             munmap((void*)m_data, m_size);
             m_data = nullptr;
-    }
+        }
         if (filedesc != -1) {
             ::close(filedesc);
             filedesc = -1;
@@ -174,6 +181,40 @@ public:
     }
     ~filemap() {
         close();
+    }
+    filemap(const filemap<constness>& o) = delete;
+    filemap& operator=(const filemap<constness>& o) = delete;
+
+    filemap(filemap<constness>&& o){
+        m_data = o.m_data;
+        m_size = o.m_size;
+        o.m_data = nullptr;
+        o.m_size = 0;
+        #ifdef __unix__
+        filedesc = o.filedesc;
+        o.filedesc = -1;
+        #elif defined(_MSC_VER)
+        m_file    = o.m_file;
+        m_mapping = o.m_mapping;
+        o.m_file = INVALID_HANDLE_VALUE;
+        o.m_mapping = NULL;
+        #endif
+    }
+    filemap& operator=(filemap<constness>&& o){
+        m_data = o.m_data;
+        m_size = o.m_size;
+        o.m_data = nullptr;
+        o.m_size = 0;
+        #ifdef __unix__
+        filedesc = o.filedesc;
+        o.filedesc = -1;
+        #elif defined(_MSC_VER)
+        m_file    = o.m_file;
+        m_mapping = o.m_mapping;
+        o.m_file = INVALID_HANDLE_VALUE;
+        o.m_mapping = NULL;
+        #endif
+        return *this;
     }
     mmap_size_t size()const {
         return m_size;
